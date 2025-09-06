@@ -1,23 +1,12 @@
-import { Text, View, StyleSheet } from "react-native";
+import { useAuth } from "@clerk/clerk-expo";
+import { Redirect } from "expo-router";
 
 export default function Index() {
-  return (
-    <View
-      style={styles.container}
-    >
-      <Text style={styles.text}>Hello Niggers</Text>
-    </View>
-  );
-}
+    const { isSignedIn } = useAuth()
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  text: {
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-});
+    if (!isSignedIn) {
+        return <Redirect href={'/(auth)/login'} />
+    }
+
+    return <Redirect href="/(tabs)/profile" />
+}
