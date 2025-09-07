@@ -1,15 +1,21 @@
 import { Text, TouchableOpacity, View } from "react-native";
 import { styles } from '@/styles/index.styles'
+import { useAuth } from "@clerk/clerk-expo";
+import { router } from "expo-router";
 
 export default function Index() {
+  const { signOut } = useAuth();
   return (
     <View
       style={styles.container}
     >
       <Text style={styles.text}>Hello black Niggers</Text>
-      <TouchableOpacity onPress={() => alert("Niggas killed successfully")}>
+      <TouchableOpacity onPress={() => {
+        signOut();
+        router.replace("/(auth)/login");
+      }}>
         <Text style={styles.button}>
-          Kill Niggas
+          SignOut
         </Text>
       </TouchableOpacity>
     </View>
