@@ -25,7 +25,7 @@ type PostProps = {
         author: {
             _id: string;
             username: string;
-            image: string;
+            image: string | undefined;
         };
     };
 };
@@ -71,6 +71,7 @@ export default function Post({ post }: PostProps) {
             {/* POST HEADER */}
             <View style={styles.postHeader}>
                 <Link
+                    // @ts-ignore
                     href={
                         currentUser?._id === post.author._id ? "/(tabs)/profile" : `/user/${post.author._id}`
                     }
@@ -78,7 +79,7 @@ export default function Post({ post }: PostProps) {
                 >
                     <TouchableOpacity style={styles.postHeaderLeft}>
                         <Image
-                            source={post.author.image}
+                            source={post.author.image || undefined}
                             style={styles.postAvatar}
                             contentFit="cover"
                             transition={200}

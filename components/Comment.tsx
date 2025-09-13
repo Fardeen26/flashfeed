@@ -14,7 +14,6 @@ interface IComment {
 export default function Comment({ comment }: { comment: IComment }) {
     return (
         <View style={styles.commentContainer}>
-            <Image source={{ uri: comment.user.image }} style={styles.commentAvatar} />
             {comment.user.image && (
                 <Image source={{ uri: comment.user.image }} style={styles.commentAvatar} />
             )}

@@ -5,23 +5,24 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    View,
-    Text,
-    TouchableOpacity,
+    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
-    ActivityIndicator,
     ScrollView,
+    Text,
     TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import { Image } from "expo-image";
 
+import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
+import { fetch } from "expo/fetch";
 
-import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useMutation } from "convex/react";
 
 export default function CreateScreen() {
     const router = useRouter();
@@ -52,15 +53,21 @@ export default function CreateScreen() {
             setIsSharing(true);
             const uploadUrl = await generateUploadUrl();
 
-            const uploadResult = await FileSystem.uploadAsync(uploadUrl, selectedImage, {
-                httpMethod: "POST",
-                uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-                mimeType: "image/jpeg",
+            // Create a File instance from the selected image URI
+            const file = new File(selectedImage);
+
+            // Upload the file using the new fetch API
+            const response = await fetch(uploadUrl, {
+                method: "POST",
+                body: file,
+                headers: {
+                    "Content-Type": "image/jpeg",
+                },
             });
 
-            if (uploadResult.status !== 200) throw new Error("Upload failed");
+            if (!response.ok) throw new Error("Upload failed");
 
-            const { storageId } = JSON.parse(uploadResult.body);
+            const { storageId } = await response.json();
             await createPost({ storageId, caption });
 
             setSelectedImage(null);
@@ -68,7 +75,7 @@ export default function CreateScreen() {
 
             router.push("/(tabs)");
         } catch (error) {
-            console.log("Error sharing post");
+            console.error("Error sharing post", error);
         } finally {
             setIsSharing(false);
         }
@@ -158,7 +165,7 @@ export default function CreateScreen() {
                         <View style={styles.inputSection}>
                             <View style={styles.captionContainer}>
                                 <Image
-                                    source={user?.imageUrl}
+                                    source={user?.imageUrl || undefined}
                                     style={styles.userAvatar}
                                     contentFit="cover"
                                     transition={200}

@@ -1,4 +1,5 @@
 import { Loader } from "@/components/Loader";
+import Post from "@/components/Post";
 import StoriesSection from "@/components/Stories";
 import { COLORS } from "@/constants/theme";
 import { api } from "@/convex/_generated/api";
