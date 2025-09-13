@@ -67,7 +67,7 @@ export const getPosts = query({
                     ...post,
                     author: {
                         _id: postAuthor?._id,
-                        username: postAuthor?.username,
+                        fullname: postAuthor?.fullname,
                         image: postAuthor?.image,
                     },
                     isLiked: !!like,
@@ -182,5 +182,23 @@ export const deletePost = mutation({
         await ctx.db.patch(currentUser._id, {
             posts: Math.max(0, (currentUser.posts || 1) - 1),
         });
+    },
+});
+
+export const getPostsByUser = query({
+    args: {
+        userId: v.optional(v.id("users")),
+    },
+    handler: async (ctx, args) => {
+        const user = args.userId ? await ctx.db.get(args.userId) : await getCurrentUser(ctx);
+
+        if (!user) throw new Error("User not found");
+
+        const posts = await ctx.db
+            .query("posts")
+            .withIndex("by_user", (q) => q.eq("userId", args.userId || user._id))
+            .collect();
+
+        return posts;
     },
 });

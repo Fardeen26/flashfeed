@@ -24,7 +24,7 @@ type PostProps = {
         isBookmarked: boolean;
         author: {
             _id: string;
-            username: string;
+            fullname: string;
             image: string | undefined;
         };
     };
@@ -85,7 +85,7 @@ export default function Post({ post }: PostProps) {
                             transition={200}
                             cachePolicy="memory-disk"
                         />
-                        <Text style={styles.postUsername}>{post.author.username}</Text>
+                        <Text style={styles.postUsername}>{post.author.fullname}</Text>
                     </TouchableOpacity>
                 </Link>
 
@@ -140,7 +140,7 @@ export default function Post({ post }: PostProps) {
                 </Text>
                 {post.caption && (
                     <View style={styles.captionContainer}>
-                        <Text style={styles.captionUsername}>{post.author.username}</Text>
+                        <Text style={styles.captionUsername}>{post.author.fullname}</Text>
                         <Text style={styles.captionText}>{post.caption}</Text>
                     </View>
                 )}
