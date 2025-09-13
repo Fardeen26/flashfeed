@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, MutationCtx, query, QueryCtx } from "./_generated/server";
 
 export const createUser = mutation({
@@ -31,13 +31,13 @@ export const createUser = mutation({
 
 export async function getCurrentUser(ctx: QueryCtx | MutationCtx) {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
+    if (!identity) throw new ConvexError("Unauthorized");
 
     const currentUser = await ctx.db.query("users")
         .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
         .first();
 
-    if (!currentUser) throw new Error("User not Found");
+    if (!currentUser) throw new ConvexError("User not found");
 
     return currentUser;
 }
