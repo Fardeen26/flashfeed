@@ -1,6 +1,6 @@
 // styles/auth.styles.ts
 import { COLORS } from "@/constants/theme";
-import { StyleSheet, Dimensions } from "react-native";
+import { Dimensions, StyleSheet } from "react-native";
 
 const { width, height } = Dimensions.get("window");
 
@@ -25,7 +25,7 @@ export const styles = StyleSheet.create({
     appName: {
         fontSize: 42,
         fontWeight: "700",
-        fontFamily: "JetBrainsMono-Medium",
+        fontFamily: "JetBrainsMono",
         color: COLORS.primary,
         letterSpacing: 0.5,
         marginBottom: 8,

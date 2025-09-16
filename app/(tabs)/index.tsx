@@ -31,7 +31,7 @@ export default function Index() {
         <View style={styles.container}>
             {/* HEADER */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>spotlight</Text>
+                <Text style={styles.headerTitle}>flashfeed</Text>
                 <TouchableOpacity onPress={() => signOut()}>
                     <Ionicons name="log-out-outline" size={24} color={COLORS.white} />
                 </TouchableOpacity>
