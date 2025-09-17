@@ -1,8 +1,13 @@
 import { COLORS } from "@/constants/theme";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { styles } from "@/styles/feed.styles";
+import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
+import { File } from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
+import { fetch } from "expo/fetch";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Dimensions, Image, Modal, Image as RNImage, Text, TouchableOpacity, View } from "react-native";
 import { UserWithStories } from "./Stories";
@@ -246,6 +251,7 @@ const StoriesModal = ({
 
 export default function Story({ story }: { story: UserWithStories }) {
     const [visible, setVisible] = useState(false);
+    const [isAddStoryModelVisible, setIsAddStoryModelVisible] = useState(false);
 
     const allStories = useQuery(api.stories.fetchStories, {});
     const startIndex = allStories?.findIndex(s => s.user._id === story.user._id) || 0;
@@ -254,17 +260,44 @@ export default function Story({ story }: { story: UserWithStories }) {
         setVisible(true);
     };
 
+    const { user } = useUser();
+    const currentUser = useQuery(api.users.getUserByClerkId, user ? { clerkId: user.id } : "skip");
+
     return (
         <View style={{
             width: "100%",
             height: "100%",
         }}>
-            <TouchableOpacity style={styles.storyWrapper} onPress={handleOpenStory}>
-                <View style={[styles.storyRing, !story.stories.length && styles.noStory]}>
-                    <RNImage source={{ uri: story.user.image }} style={styles.storyAvatar} />
-                </View>
-                <Text style={styles.storyUsername}>{story.user.username}</Text>
-            </TouchableOpacity>
+            <View style={{
+                display: "flex",
+                flexDirection: "row",
+                gap: 8,
+            }}>
+                {/* current user model */}
+                <TouchableOpacity onPress={() => setIsAddStoryModelVisible(true)}>
+                    <View style={[styles.noStory]}>
+                        <RNImage source={{ uri: currentUser?.image }} style={styles.storyAvatar} />
+                    </View>
+                    <Text style={styles.storyUsername}>{currentUser?.username.slice(0, 10)}</Text>
+                    <TouchableOpacity style={{
+                        position: "absolute",
+                        bottom: 20,
+                        right: 0,
+                        backgroundColor: COLORS.primary,
+                        borderRadius: 100,
+                        padding: 2,
+                    }}>
+                        <Ionicons name="add" size={16} color={COLORS.white} />
+                    </TouchableOpacity>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.storyWrapper} onPress={handleOpenStory}>
+                    <View style={[styles.storyRing, !story.stories.length && styles.noStory]}>
+                        <RNImage source={{ uri: story.user.image }} style={styles.storyAvatar} />
+                    </View>
+                    <Text style={styles.storyUsername}>{story.user.username.slice(0, 10)}</Text>
+                </TouchableOpacity>
+            </View>
 
             {allStories && (
                 <StoriesModal
@@ -274,6 +307,128 @@ export default function Story({ story }: { story: UserWithStories }) {
                     onClose={() => setVisible(false)}
                 />
             )}
+
+            <AddStoryModel isAddStoryModelVisible={isAddStoryModelVisible} onClose={() => setIsAddStoryModelVisible(false)} />
         </View>
     );
+}
+
+interface AddStoryModelType {
+    isAddStoryModelVisible: boolean;
+    onClose: () => void;
+}
+
+const AddStoryModel = ({ isAddStoryModelVisible, onClose }: AddStoryModelType) => {
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [isPosting, setIsPosting] = useState(false);
+
+    const pickImage = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: "images",
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+        });
+
+        if (!result.canceled) setSelectedImage(result.assets[0].uri);
+    }
+
+    const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
+    const createStory = useMutation(api.stories.createStory);
+
+    const handleShare = async () => {
+        if (!selectedImage) return;
+
+        setIsPosting(true);
+        try {
+            const uploadUrl = await generateUploadUrl();
+            const file = new File(selectedImage);
+
+            const response = await fetch(uploadUrl, {
+                method: "POST",
+                body: file,
+                headers: {
+                    "Content-Type": "image/jpeg",
+                },
+            });
+
+            if (!response.ok) throw new Error("Upload failed");
+
+            const responseData = await response.json();
+            const { storageId } = responseData;
+            await createStory({ storageId: storageId as Id<"_storage"> });
+
+            setSelectedImage(null);
+            onClose();
+        } catch (error) {
+            console.error("Error sharing story", error);
+        } finally {
+            setIsPosting(false);
+        }
+    }
+
+    return (
+        <Modal
+            visible={isAddStoryModelVisible}
+            onRequestClose={onClose}
+            animationType="slide"
+        >
+            {
+                !selectedImage && (
+                    <View style={styles.container}>
+                        <View style={styles.header}>
+                            <TouchableOpacity onPress={() => {
+                                setSelectedImage(null);
+                                onClose();
+                            }}>
+                                <Ionicons name="arrow-back" size={28} color={COLORS.primary} />
+                            </TouchableOpacity>
+                            <Text style={styles.headerTitle}>Post a Story</Text>
+                            <View style={{ width: 28 }} />
+                        </View>
+
+                        <TouchableOpacity style={styles.emptyImageContainer} onPress={pickImage}>
+                            <Ionicons name="image-outline" size={48} color={COLORS.grey} />
+                            <Text style={styles.emptyImageText}>Tap to select an image</Text>
+                        </TouchableOpacity>
+                    </View>
+                )
+            }
+
+            {
+                selectedImage && (
+                    <View style={styles.container}>
+                        <View style={styles.header}>
+                            <TouchableOpacity onPress={() => {
+                                setSelectedImage(null);
+                                onClose();
+                            }}>
+                                <Ionicons name="arrow-back" size={28} color={COLORS.primary} />
+                            </TouchableOpacity>
+                            <Text style={styles.headerTitle}>Post a Story</Text>
+                            <View style={{ width: 28 }} />
+                        </View>
+
+                        <Image
+                            source={{ uri: selectedImage }}
+                            style={{ width: "100%", height: "100%", borderRadius: 10 }}
+                            resizeMode="cover"
+                        />
+
+                        <TouchableOpacity style={{
+                            position: "absolute",
+                            bottom: 10,
+                            right: 10,
+                            backgroundColor: COLORS.primary,
+                            borderRadius: 100,
+                            paddingHorizontal: 24,
+                            paddingVertical: 8
+                        }} onPress={handleShare}>
+                            <Text style={{ color: COLORS.white, fontSize: 16 }}>{isPosting ? 'Uploading...' : 'Post Story'}</Text>
+                        </TouchableOpacity>
+                    </View>
+                )
+            }
+        </Modal>
+    )
 }

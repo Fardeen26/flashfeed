@@ -15,7 +15,6 @@ export const createStory = mutation({
 
         const now = new Date();
         const timestamp = now.getTime();
-        // Set expiration to 24 hours from now (24 * 60 * 60 * 1000 milliseconds)
         const expiresAt = timestamp + (24 * 60 * 60 * 1000);
 
         const storyId = await ctx.db.insert("stories", {

@@ -43,7 +43,25 @@ export const styles = StyleSheet.create({
         marginBottom: 4,
     },
     noStory: {
-        borderColor: COLORS.grey,
+        width: 68,
+        height: 68,
+        borderRadius: 34,
+        padding: 2,
+        backgroundColor: COLORS.background,
+        borderWidth: 2,
+        borderColor: 'gray',
+        marginBottom: 4,
+        position: 'relative',
+    },
+    emptyImageContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        gap: 12,
+    },
+    emptyImageText: {
+        color: COLORS.grey,
+        fontSize: 16,
     },
     storyAvatar: {
         width: 60,

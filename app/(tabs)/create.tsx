@@ -52,11 +52,8 @@ export default function CreateScreen() {
         try {
             setIsSharing(true);
             const uploadUrl = await generateUploadUrl();
-
-            // Create a File instance from the selected image URI
             const file = new File(selectedImage);
 
-            // Upload the file using the new fetch API
             const response = await fetch(uploadUrl, {
                 method: "POST",
                 body: file,
