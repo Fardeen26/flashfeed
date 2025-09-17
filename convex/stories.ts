@@ -195,3 +195,66 @@ export const fetchStoriesWithViewStatus = query({
         return storiesByUser;
     }
 });
+
+
+export const fetchCurrentUserStories = query({
+    handler: async (ctx, args) => {
+        const currentUser = await getCurrentUser(ctx);
+        const now = Date.now();
+
+        const userStories = await ctx.db.query("stories").withIndex("by_user", (q) => q.eq("userId", currentUser._id)).filter((q) => q.gt(q.field("expiresAt"), now)).collect();
+
+        return userStories;
+    }
+})
+
+export const fetchCurrentUserStoriesWithViewStatus = query({
+    handler: async (ctx) => {
+        const currentUser = await getCurrentUser(ctx);
+        const now = Date.now();
+
+        const userStories = await ctx.db
+            .query("stories")
+            .withIndex("by_user", (q) => q.eq("userId", currentUser._id))
+            .filter((q) => q.gt(q.field("expiresAt"), now))
+            .collect();
+
+        if (userStories.length === 0) {
+            return {
+                user: {
+                    _id: currentUser._id,
+                    username: currentUser.username,
+                    fullname: currentUser.fullname,
+                    image: currentUser.image,
+                },
+                stories: [],
+                hasViewedAll: false
+            };
+        }
+
+        const viewedStories = await ctx.db
+            .query("storyViews")
+            .withIndex("by_user", (q) => q.eq("userId", currentUser._id))
+            .collect();
+
+        const viewedStoryIds = new Set(viewedStories.map(v => v.storyId));
+        const hasViewedAll = userStories.every(story => viewedStoryIds.has(story._id));
+
+        return {
+            user: {
+                _id: currentUser._id,
+                username: currentUser.username,
+                fullname: currentUser.fullname,
+                image: currentUser.image,
+            },
+            stories: userStories.map(story => ({
+                _id: story._id,
+                imageUrl: story.imageUrl,
+                storageId: story.storageId,
+                expiresAt: story.expiresAt,
+                createdAt: story._creationTime,
+            })),
+            hasViewedAll: hasViewedAll
+        };
+    }
+})

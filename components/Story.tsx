@@ -12,6 +12,242 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Dimensions, Image, Modal, Image as RNImage, Text, TouchableOpacity, View } from "react-native";
 import { UserWithStories } from "./Stories";
 
+const CurrentUserStoriesModal = ({
+    currentUserStories,
+    currentUser,
+    visible,
+    onClose,
+    onAddStory,
+    markStoryAsViewed
+}: {
+    currentUserStories: any[];
+    currentUser: any;
+    visible: boolean;
+    onClose: () => void;
+    onAddStory: () => void;
+    markStoryAsViewed: (args: { storyId: Id<"stories"> }) => Promise<null>;
+}) => {
+    const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
+    const [isPlaying, setIsPlaying] = useState(true);
+    const progressAnimations = useRef<Animated.Value[]>([]);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const currentStory = currentUserStories[currentStoryIndex];
+
+    const nextStory = useCallback(() => {
+        if (currentStoryIndex < currentUserStories.length - 1) {
+            setCurrentStoryIndex(prev => prev + 1);
+        } else {
+            onClose();
+        }
+    }, [currentStoryIndex, currentUserStories.length, onClose]);
+
+    useEffect(() => {
+        if (currentUserStories.length > 0) {
+            progressAnimations.current = currentUserStories.map(() => new Animated.Value(0));
+        }
+    }, [currentUserStories]);
+
+    useEffect(() => {
+        if (!visible || !isPlaying || !currentStory) return;
+
+        if (currentStory._id) {
+            markStoryAsViewed({ storyId: currentStory._id as Id<"stories"> }).catch(console.error);
+        }
+
+        if (progressAnimations.current[currentStoryIndex]) {
+            progressAnimations.current[currentStoryIndex].setValue(0);
+        }
+
+        if (progressAnimations.current[currentStoryIndex]) {
+            Animated.timing(progressAnimations.current[currentStoryIndex], {
+                toValue: 1,
+                duration: 5000,
+                useNativeDriver: false,
+            }).start();
+        }
+
+        timerRef.current = setTimeout(() => {
+            nextStory();
+        }, 5000);
+
+        return () => {
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+            }
+        };
+    }, [currentStoryIndex, visible, isPlaying, currentStory, nextStory, markStoryAsViewed]);
+
+    const previousStory = () => {
+        if (currentStoryIndex > 0) {
+            setCurrentStoryIndex(prev => prev - 1);
+        }
+    };
+
+    const handlePress = (event: any) => {
+        const { locationX } = event.nativeEvent;
+        const screenWidth = Dimensions.get('window').width;
+
+        if (locationX < screenWidth / 2) {
+            previousStory();
+        } else {
+            nextStory();
+        }
+    };
+
+    const pauseStory = () => {
+        setIsPlaying(false);
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+        }
+    };
+
+    const resumeStory = () => {
+        setIsPlaying(true);
+    };
+
+    if (!visible || !currentStory) return null;
+
+    return (
+        <Modal
+            visible={visible}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={onClose}
+        >
+            <View style={{
+                flex: 1,
+                backgroundColor: COLORS.background,
+            }}>
+                <View style={{
+                    position: 'absolute',
+                    top: 15,
+                    left: 10,
+                    right: 10,
+                    zIndex: 1000,
+                    flexDirection: 'row',
+                }}>
+                    {currentUserStories.map((_, index) => {
+                        const isCurrent = index === currentStoryIndex;
+                        const isPast = index < currentStoryIndex;
+
+                        return (
+                            <View
+                                key={index}
+                                style={{
+                                    flex: 1,
+                                    height: 3,
+                                    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                                    marginHorizontal: 2,
+                                    borderRadius: 1.5,
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                <Animated.View
+                                    style={{
+                                        height: '100%',
+                                        backgroundColor: COLORS.white,
+                                        width: isPast
+                                            ? '100%'
+                                            : isCurrent && isPlaying
+                                                ? progressAnimations.current[index]?.interpolate({
+                                                    inputRange: [0, 1],
+                                                    outputRange: ['0%', '100%'],
+                                                }) || '0%'
+                                                : '0%',
+                                    }}
+                                />
+                            </View>
+                        );
+                    })}
+                </View>
+
+                <View style={{
+                    position: 'absolute',
+                    top: 20,
+                    left: 0,
+                    right: 0,
+                    zIndex: 1000,
+                    paddingHorizontal: 15,
+                    paddingVertical: 10,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                }}>
+                    <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                    }}>
+                        <Image
+                            source={{ uri: currentUser?.image || '' }}
+                            style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 16,
+                                marginRight: 10,
+                            }}
+                        />
+                        <Text style={{
+                            color: COLORS.white,
+                            fontSize: 16,
+                            fontWeight: '600',
+                        }}>
+                            {currentUser?.username}
+                        </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <TouchableOpacity onPress={onAddStory} style={{ marginRight: 15 }}>
+                            <Ionicons name="add" size={24} color={COLORS.white} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={onClose}>
+                            <Ionicons name="close" size={24} color={COLORS.white} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                <TouchableOpacity
+                    style={{ flex: 1 }}
+                    onPress={handlePress}
+                    onPressIn={pauseStory}
+                    onPressOut={resumeStory}
+                    activeOpacity={1}
+                >
+                    <Image
+                        source={{ uri: currentStory.imageUrl }}
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                        }}
+                        resizeMode="cover"
+                    />
+                </TouchableOpacity>
+
+                <View style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    flexDirection: 'row',
+                }}>
+                    <TouchableOpacity
+                        style={{ flex: 1 }}
+                        onPress={previousStory}
+                        onPressIn={pauseStory}
+                        onPressOut={resumeStory}
+                    />
+                    <TouchableOpacity
+                        style={{ flex: 1 }}
+                        onPress={nextStory}
+                        onPressIn={pauseStory}
+                        onPressOut={resumeStory}
+                    />
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
 const StoriesModal = ({
     allStories,
     startIndex,
@@ -259,6 +495,7 @@ const StoriesModal = ({
 export default function Story({ story }: { story: UserWithStories }) {
     const [visible, setVisible] = useState(false);
     const [isAddStoryModelVisible, setIsAddStoryModelVisible] = useState(false);
+    const [isCurrentUserStoriesVisible, setIsCurrentUserStoriesVisible] = useState(false);
 
     const allStories = useQuery(api.stories.fetchStoriesWithViewStatus, {});
     const startIndex = allStories?.findIndex(s => s.user._id === story.user._id) || 0;
@@ -269,7 +506,22 @@ export default function Story({ story }: { story: UserWithStories }) {
 
     const { user } = useUser();
     const currentUser = useQuery(api.users.getUserByClerkId, user ? { clerkId: user.id } : "skip");
+    const currentUserStoriesData = useQuery(api.stories.fetchCurrentUserStoriesWithViewStatus, {});
     const markStoryAsViewed = useMutation(api.stories.markStoryAsViewed);
+
+    const handleCurrentUserStoryPress = () => {
+        if (currentUserStoriesData && currentUserStoriesData.stories.length > 0) {
+            setIsCurrentUserStoriesVisible(true);
+        } else {
+            setIsAddStoryModelVisible(true);
+        }
+    };
+
+    const handleCurrentUserStorySwipe = () => {
+        if (currentUserStoriesData && currentUserStoriesData.stories.length > 0) {
+            setIsAddStoryModelVisible(true);
+        }
+    };
 
     return (
         <View style={{
@@ -281,22 +533,30 @@ export default function Story({ story }: { story: UserWithStories }) {
                 flexDirection: "row",
                 gap: 8,
             }}>
-                {/* current user model */}
-                <TouchableOpacity onPress={() => setIsAddStoryModelVisible(true)}>
-                    <View style={[styles.noStory]}>
+                {/* current user story */}
+                <TouchableOpacity onPress={handleCurrentUserStoryPress}>
+                    <View style={[
+                        currentUserStoriesData && currentUserStoriesData.stories.length > 0 ? styles.storyRing : styles.noStory,
+                        currentUserStoriesData && currentUserStoriesData.hasViewedAll && styles.viewedStoryRing
+                    ]}>
                         <RNImage source={{ uri: currentUser?.image }} style={styles.storyAvatar} />
                     </View>
                     <Text style={styles.storyUsername}>{currentUser?.username.slice(0, 10)}</Text>
-                    <TouchableOpacity style={{
-                        position: "absolute",
-                        bottom: 20,
-                        right: 0,
-                        backgroundColor: COLORS.primary,
-                        borderRadius: 100,
-                        padding: 2,
-                    }}>
-                        <Ionicons name="add" size={16} color={COLORS.white} />
-                    </TouchableOpacity>
+                    {currentUserStoriesData && currentUserStoriesData.stories.length > 0 && (
+                        <TouchableOpacity
+                            style={{
+                                position: "absolute",
+                                bottom: 20,
+                                right: 0,
+                                backgroundColor: COLORS.primary,
+                                borderRadius: 100,
+                                padding: 2,
+                            }}
+                            onPress={handleCurrentUserStorySwipe}
+                        >
+                            <Ionicons name="add" size={16} color={COLORS.white} />
+                        </TouchableOpacity>
+                    )}
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.storyWrapper} onPress={handleOpenStory}>
@@ -317,6 +577,20 @@ export default function Story({ story }: { story: UserWithStories }) {
                     startIndex={startIndex}
                     visible={visible}
                     onClose={() => setVisible(false)}
+                    markStoryAsViewed={markStoryAsViewed}
+                />
+            )}
+
+            {currentUserStoriesData && (
+                <CurrentUserStoriesModal
+                    currentUserStories={currentUserStoriesData.stories}
+                    currentUser={currentUser}
+                    visible={isCurrentUserStoriesVisible}
+                    onClose={() => setIsCurrentUserStoriesVisible(false)}
+                    onAddStory={() => {
+                        setIsCurrentUserStoriesVisible(false);
+                        setIsAddStoryModelVisible(true);
+                    }}
                     markStoryAsViewed={markStoryAsViewed}
                 />
             )}
@@ -349,6 +623,7 @@ const AddStoryModel = ({ isAddStoryModelVisible, onClose, currentUser }: AddStor
 
     const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
     const createStory = useMutation(api.stories.createStory);
+
 
     const handleShare = async () => {
         if (!selectedImage) return;
@@ -388,7 +663,7 @@ const AddStoryModel = ({ isAddStoryModelVisible, onClose, currentUser }: AddStor
             animationType="slide"
         >
             {
-                !currentUser.stories.length || !selectedImage && (
+                !selectedImage && (
                     <View style={styles.container}>
                         <View style={styles.header}>
                             <TouchableOpacity onPress={() => {
