@@ -66,4 +66,13 @@ export default defineSchema({
         storageId: v.id("_storage"),
         expiresAt: v.number(),
     }).index("by_user", ["userId"]),
+
+    storyViews: defineTable({
+        userId: v.id("users"),
+        storyId: v.id("stories"),
+        viewedAt: v.number(),
+    })
+        .index("by_user", ["userId"])
+        .index("by_story", ["storyId"])
+        .index("by_user_and_story", ["userId", "storyId"])
 });

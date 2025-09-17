@@ -23,11 +23,12 @@ export type UserData = {
 export type UserWithStories = {
     user: UserData;
     stories: StoryData[];
+    hasViewedAll?: boolean;
 };
 
 
 const StoriesSection = () => {
-    const stories = useQuery(api.stories.fetchStories, {});
+    const stories = useQuery(api.stories.fetchStoriesWithViewStatus, {});
 
     return (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.storiesContainer}>

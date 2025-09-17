@@ -53,6 +53,9 @@ export const styles = StyleSheet.create({
         marginBottom: 4,
         position: 'relative',
     },
+    viewedStoryRing: {
+        borderColor: COLORS.grey,
+    },
     emptyImageContainer: {
         flex: 1,
         justifyContent: "center",

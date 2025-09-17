@@ -16,12 +16,14 @@ const StoriesModal = ({
     allStories,
     startIndex,
     visible,
-    onClose
+    onClose,
+    markStoryAsViewed
 }: {
     allStories: UserWithStories[];
     startIndex: number;
     visible: boolean;
     onClose: () => void;
+    markStoryAsViewed: (args: { storyId: Id<"stories"> }) => Promise<null>;
 }) => {
     const [currentUserIndex, setCurrentUserIndex] = useState(startIndex);
     const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
@@ -57,6 +59,11 @@ const StoriesModal = ({
     useEffect(() => {
         if (!visible || !isPlaying || !currentStory) return;
 
+        // Mark story as viewed when it starts playing
+        if (currentStory._id) {
+            markStoryAsViewed({ storyId: currentStory._id as Id<"stories"> }).catch(console.error);
+        }
+
         if (progressAnimations.current[currentStoryIndex]) {
             progressAnimations.current[currentStoryIndex].setValue(0);
         }
@@ -78,7 +85,7 @@ const StoriesModal = ({
                 clearTimeout(timerRef.current);
             }
         };
-    }, [currentUserIndex, currentStoryIndex, visible, isPlaying, currentStory, nextStory]);
+    }, [currentUserIndex, currentStoryIndex, visible, isPlaying, currentStory, nextStory, markStoryAsViewed]);
 
     const previousStory = () => {
         if (currentStoryIndex > 0) {
@@ -253,7 +260,7 @@ export default function Story({ story }: { story: UserWithStories }) {
     const [visible, setVisible] = useState(false);
     const [isAddStoryModelVisible, setIsAddStoryModelVisible] = useState(false);
 
-    const allStories = useQuery(api.stories.fetchStories, {});
+    const allStories = useQuery(api.stories.fetchStoriesWithViewStatus, {});
     const startIndex = allStories?.findIndex(s => s.user._id === story.user._id) || 0;
 
     const handleOpenStory = () => {
@@ -262,6 +269,7 @@ export default function Story({ story }: { story: UserWithStories }) {
 
     const { user } = useUser();
     const currentUser = useQuery(api.users.getUserByClerkId, user ? { clerkId: user.id } : "skip");
+    const markStoryAsViewed = useMutation(api.stories.markStoryAsViewed);
 
     return (
         <View style={{
@@ -292,7 +300,11 @@ export default function Story({ story }: { story: UserWithStories }) {
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.storyWrapper} onPress={handleOpenStory}>
-                    <View style={[styles.storyRing, !story.stories.length && styles.noStory]}>
+                    <View style={[
+                        styles.storyRing,
+                        !story.stories.length && styles.noStory,
+                        story.hasViewedAll && styles.viewedStoryRing
+                    ]}>
                         <RNImage source={{ uri: story.user.image }} style={styles.storyAvatar} />
                     </View>
                     <Text style={styles.storyUsername}>{story.user.username.slice(0, 10)}</Text>
@@ -305,10 +317,11 @@ export default function Story({ story }: { story: UserWithStories }) {
                     startIndex={startIndex}
                     visible={visible}
                     onClose={() => setVisible(false)}
+                    markStoryAsViewed={markStoryAsViewed}
                 />
             )}
 
-            <AddStoryModel isAddStoryModelVisible={isAddStoryModelVisible} onClose={() => setIsAddStoryModelVisible(false)} />
+            <AddStoryModel isAddStoryModelVisible={isAddStoryModelVisible} onClose={() => setIsAddStoryModelVisible(false)} currentUser={currentUser} />
         </View>
     );
 }
@@ -316,9 +329,10 @@ export default function Story({ story }: { story: UserWithStories }) {
 interface AddStoryModelType {
     isAddStoryModelVisible: boolean;
     onClose: () => void;
+    currentUser: any;
 }
 
-const AddStoryModel = ({ isAddStoryModelVisible, onClose }: AddStoryModelType) => {
+const AddStoryModel = ({ isAddStoryModelVisible, onClose, currentUser }: AddStoryModelType) => {
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [isPosting, setIsPosting] = useState(false);
 
@@ -374,7 +388,7 @@ const AddStoryModel = ({ isAddStoryModelVisible, onClose }: AddStoryModelType) =
             animationType="slide"
         >
             {
-                !selectedImage && (
+                !currentUser.stories.length || !selectedImage && (
                     <View style={styles.container}>
                         <View style={styles.header}>
                             <TouchableOpacity onPress={() => {
