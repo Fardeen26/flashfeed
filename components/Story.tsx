@@ -38,6 +38,7 @@ const CurrentUserStoriesModal = ({
 
     const currentStory = currentUserStories[currentStoryIndex];
     const storyViews = useQuery(api.stories.fetchIndividualStoryViews, { storyId: currentStory._id })
+    const deleteStory = useMutation(api.stories.deleteStory)
 
     const nextStory = useCallback(() => {
         if (currentStoryIndex < currentUserStories.length - 1) {
@@ -119,6 +120,17 @@ const CurrentUserStoriesModal = ({
     const resumeStory = () => {
         setIsPlaying(true);
     };
+
+    const handleStoryDelete = async () => {
+        try {
+            await deleteStory({ storyId: currentStory._id })
+            setIsShowViewsOpen(false)
+            setCurrentStoryIndex(0)
+            onClose();
+        } catch (error) {
+            console.error("Error deleting story:", error);
+        }
+    }
 
     if (!visible || !currentStory) return null;
 
@@ -233,7 +245,6 @@ const CurrentUserStoriesModal = ({
                             width: '100%',
                             height: '100%',
                         }}
-                        cachePolicy='memory-disk'
                     />
                 </TouchableOpacity>
 
@@ -279,25 +290,35 @@ const CurrentUserStoriesModal = ({
                     paddingHorizontal: 20,
                 }}
             >
-                <TouchableOpacity style={{ display: 'flex', gap: 0, justifyContent: 'center', alignItems: 'center' }} onPress={() => setIsShowViewsOpen(true)}>
-                    <View style={{ display: 'flex', flexDirection: 'row', gap: 0 }}>
-                        {
-                            storyViews?.slice(0, 3).map((story, idx) => (
-                                <Image
-                                    source={{ uri: story.userImage || '' }}
-                                    style={{
-                                        width: 24,
-                                        height: 24,
-                                        borderRadius: 12,
-                                    }}
-                                    key={idx}
-                                    cachePolicy="memory-disk"
-                                />
-                            ))
-                        }
-                    </View>
-                    <Text style={{ color: COLORS.white, fontSize: 12, fontWeight: '600' }}>Activity</Text>
-                </TouchableOpacity>
+                {
+                    storyViews?.length && storyViews.length > 1 && (
+                        <TouchableOpacity style={{ display: 'flex', gap: 0, justifyContent: 'center', alignItems: 'center' }} onPress={() => setIsShowViewsOpen(true)}>
+                            <View style={{ display: 'flex', flexDirection: 'row', gap: 0 }}>
+                                {
+                                    storyViews?.slice(0, 3).map((view, idx) => (
+                                        <View key={idx}>
+                                            {
+                                                view.id !== currentUser._id && (
+                                                    <Image
+                                                        source={{ uri: view.userImage || '' }}
+                                                        style={{
+                                                            width: 24,
+                                                            height: 24,
+                                                            borderRadius: 12,
+                                                        }}
+                                                        key={idx}
+                                                        cachePolicy="memory-disk"
+                                                    />
+                                                )
+                                            }
+                                        </View>
+                                    ))
+                                }
+                            </View>
+                            <Text style={{ color: COLORS.white, fontSize: 12, fontWeight: '600' }}>Activity</Text>
+                        </TouchableOpacity>
+                    )
+                }
             </View>
 
             {
@@ -344,9 +365,9 @@ const CurrentUserStoriesModal = ({
                                 <Text style={{
                                     color: 'white',
                                     fontSize: 18
-                                }}>{storyViews?.length}</Text>
+                                }}>{(storyViews?.length && storyViews?.length - 1)}</Text>
                             </View>
-                            <TouchableOpacity>
+                            <TouchableOpacity onPress={handleStoryDelete}>
                                 <Ionicons name="trash-outline" size={22} color={COLORS.primary} />
                             </TouchableOpacity>
                         </View>
@@ -362,28 +383,32 @@ const CurrentUserStoriesModal = ({
                                 {
                                     storyViews?.map((user, idx) => (
                                         <View key={idx} style={{ flexDirection: 'column', gap: 4 }}>
-                                            <Link
-                                                // @ts-ignore
-                                                href={
-                                                    currentUser?._id === user.id ? "/(tabs)/profile" : `/user/${user.id}`
-                                                }
-                                                asChild
-                                            >
-                                                <TouchableOpacity style={styles.postHeaderLeft}>
-                                                    <Image
-                                                        source={
-                                                            user.userImage
-                                                                ? { uri: user.userImage }
-                                                                : require('../assets/images/icon.png')
+                                            {
+                                                user.id !== currentUser._id && (
+                                                    <Link
+                                                        // @ts-ignore
+                                                        href={
+                                                            currentUser?._id === user.id ? "/(tabs)/profile" : `/user/${user.id}`
                                                         }
-                                                        style={styles.postAvatar}
-                                                        cachePolicy='memory-disk'
-                                                    />
-                                                    <Text style={{
-                                                        color: 'white'
-                                                    }}>{user.username}</Text>
-                                                </TouchableOpacity>
-                                            </Link>
+                                                        asChild
+                                                    >
+                                                        <TouchableOpacity style={styles.postHeaderLeft}>
+                                                            <Image
+                                                                source={
+                                                                    user.userImage
+                                                                        ? { uri: user.userImage }
+                                                                        : require('../assets/images/icon.png')
+                                                                }
+                                                                style={styles.postAvatar}
+                                                                cachePolicy='memory-disk'
+                                                            />
+                                                            <Text style={{
+                                                                color: 'white'
+                                                            }}>{user.username}</Text>
+                                                        </TouchableOpacity>
+                                                    </Link>
+                                                )
+                                            }
                                         </View>
                                     ))
                                 }
@@ -612,7 +637,6 @@ const StoriesModal = ({
                             width: '100%',
                             height: '100%',
                         }}
-                        cachePolicy='memory-disk'
                     />
                 </TouchableOpacity>
 

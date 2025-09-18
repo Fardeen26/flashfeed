@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./users";
 
@@ -283,4 +283,24 @@ export const fetchIndividualStoryViews = query({
     }
 })
 
+export const deleteStory = mutation({
+    args: {
+        storyId: v.id("stories")
+    },
 
+    handler: async (ctx, args) => {
+        const story = await ctx.db.get(args.storyId);
+
+        if (!story) throw new ConvexError("Story not found");
+
+        const storyViews = await ctx.db.query("storyViews").withIndex("by_story", (q) => q.eq("storyId", story._id)).collect();
+
+        for (const view of storyViews) {
+            await ctx.db.delete(view._id)
+        }
+
+        await ctx.storage.delete(story.storageId);
+
+        await ctx.db.delete(story._id)
+    }
+})
