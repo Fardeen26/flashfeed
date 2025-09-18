@@ -258,3 +258,29 @@ export const fetchCurrentUserStoriesWithViewStatus = query({
         };
     }
 })
+
+export const fetchIndividualStoryViews = query({
+    args: {
+        storyId: v.id("stories")
+    },
+
+    handler: async (ctx, args) => {
+        const storyViews = await ctx.db.query("storyViews").withIndex("by_story", (q) => q.eq("storyId", args.storyId)).collect();
+
+        const storyViewWithInfo = await Promise.all(
+            storyViews.map(async (story) => {
+                const userInfo = await ctx.db.query("users").withIndex("by_id", (q) => q.eq("_id", story.userId)).collect();
+
+                return {
+                    id: userInfo[0]._id,
+                    username: userInfo[0].fullname,
+                    userImage: userInfo[0].image,
+                }
+            })
+        )
+
+        return storyViewWithInfo;
+    }
+})
+
+

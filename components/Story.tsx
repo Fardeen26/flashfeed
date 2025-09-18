@@ -1,3 +1,4 @@
+
 import { COLORS } from "@/constants/theme";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -6,10 +7,12 @@ import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { File } from "expo-file-system";
+import { Image } from 'expo-image';
 import * as ImagePicker from "expo-image-picker";
+import { Link } from "expo-router";
 import { fetch } from "expo/fetch";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Animated, Dimensions, Image, Modal, Image as RNImage, Text, TouchableOpacity, View } from "react-native";
+import { Animated, Dimensions, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { UserWithStories } from "./Stories";
 
 const CurrentUserStoriesModal = ({
@@ -29,15 +32,19 @@ const CurrentUserStoriesModal = ({
 }) => {
     const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
+    const [isShowViewsOpen, setIsShowViewsOpen] = useState(false);
     const progressAnimations = useRef<Animated.Value[]>([]);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const currentStory = currentUserStories[currentStoryIndex];
+    const storyViews = useQuery(api.stories.fetchIndividualStoryViews, { storyId: currentStory._id })
 
     const nextStory = useCallback(() => {
         if (currentStoryIndex < currentUserStories.length - 1) {
+            setIsShowViewsOpen(false)
             setCurrentStoryIndex(prev => prev + 1);
         } else {
+            setIsShowViewsOpen(false)
             onClose();
         }
     }, [currentStoryIndex, currentUserStories.length, onClose]);
@@ -68,6 +75,7 @@ const CurrentUserStoriesModal = ({
         }
 
         timerRef.current = setTimeout(() => {
+            setIsShowViewsOpen(false)
             nextStory();
         }, 5000);
 
@@ -78,8 +86,14 @@ const CurrentUserStoriesModal = ({
         };
     }, [currentStoryIndex, visible, isPlaying, currentStory, nextStory, markStoryAsViewed]);
 
+    useEffect(() => {
+        if (isShowViewsOpen) pauseStory();
+        else resumeStory();
+    }, [isShowViewsOpen])
+
     const previousStory = () => {
         if (currentStoryIndex > 0) {
+            setIsShowViewsOpen(false)
             setCurrentStoryIndex(prev => prev - 1);
         }
     };
@@ -186,6 +200,7 @@ const CurrentUserStoriesModal = ({
                                 borderRadius: 16,
                                 marginRight: 10,
                             }}
+                            cachePolicy='memory-disk'
                         />
                         <Text style={{
                             color: COLORS.white,
@@ -218,7 +233,7 @@ const CurrentUserStoriesModal = ({
                             width: '100%',
                             height: '100%',
                         }}
-                        resizeMode="cover"
+                        cachePolicy='memory-disk'
                     />
                 </TouchableOpacity>
 
@@ -244,6 +259,140 @@ const CurrentUserStoriesModal = ({
                     />
                 </View>
             </View>
+
+            {/* Views */}
+            <View
+                style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    zIndex: 1000,
+                    left: 0,
+                    shadowColor: 'black',
+                    shadowOffset: {
+                        width: 0,
+                        height: 4,
+                    },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 8,
+                    paddingVertical: 15,
+                    paddingHorizontal: 20,
+                }}
+            >
+                <TouchableOpacity style={{ display: 'flex', gap: 0, justifyContent: 'center', alignItems: 'center' }} onPress={() => setIsShowViewsOpen(true)}>
+                    <View style={{ display: 'flex', flexDirection: 'row', gap: 0 }}>
+                        {
+                            storyViews?.slice(0, 3).map((story, idx) => (
+                                <Image
+                                    source={{ uri: story.userImage || '' }}
+                                    style={{
+                                        width: 24,
+                                        height: 24,
+                                        borderRadius: 12,
+                                    }}
+                                    key={idx}
+                                    cachePolicy="memory-disk"
+                                />
+                            ))
+                        }
+                    </View>
+                    <Text style={{ color: COLORS.white, fontSize: 12, fontWeight: '600' }}>Activity</Text>
+                </TouchableOpacity>
+            </View>
+
+            {
+                isShowViewsOpen && (
+                    <Modal
+                        visible={isShowViewsOpen}
+                        onRequestClose={() => setIsShowViewsOpen(false)}
+                        animationType="slide"
+                        backdropColor={'black'}
+                    >
+                        <View style={{
+                            borderBottomWidth: 1,
+                            borderBottomColor: COLORS.surface,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexDirection: 'row',
+                            paddingVertical: 10,
+                            paddingHorizontal: 5
+                        }}>
+                            <Text style={styles.headerTitle}>Story Views</Text>
+                            <TouchableOpacity onPress={() => setIsShowViewsOpen(false)}>
+                                <Ionicons name="close" size={28} color={'white'} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={{
+                            borderBottomWidth: 1,
+                            borderBottomColor: COLORS.surface,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexDirection: 'row',
+                            paddingVertical: 20,
+                            paddingHorizontal: 5
+                        }}>
+                            <View style={{
+                                gap: 3,
+                                display: 'flex',
+                                flexDirection: 'row',
+                                alignItems: 'center'
+                            }}>
+                                <Ionicons name="person" size={20} color={'white'} />
+                                <Text style={{
+                                    color: 'white',
+                                    fontSize: 18
+                                }}>{storyViews?.length}</Text>
+                            </View>
+                            <TouchableOpacity>
+                                <Ionicons name="trash-outline" size={22} color={COLORS.primary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false} style={{
+                            flex: 1,
+                            marginTop: 10
+                        }}>
+                            <View style={{
+                                padding: 10,
+                                gap: 10
+                            }}>
+                                {
+                                    storyViews?.map((user, idx) => (
+                                        <View key={idx} style={{ flexDirection: 'column', gap: 4 }}>
+                                            <Link
+                                                // @ts-ignore
+                                                href={
+                                                    currentUser?._id === user.id ? "/(tabs)/profile" : `/user/${user.id}`
+                                                }
+                                                asChild
+                                            >
+                                                <TouchableOpacity style={styles.postHeaderLeft}>
+                                                    <Image
+                                                        source={
+                                                            user.userImage
+                                                                ? { uri: user.userImage }
+                                                                : require('../assets/images/icon.png')
+                                                        }
+                                                        style={styles.postAvatar}
+                                                        cachePolicy='memory-disk'
+                                                    />
+                                                    <Text style={{
+                                                        color: 'white'
+                                                    }}>{user.username}</Text>
+                                                </TouchableOpacity>
+                                            </Link>
+                                        </View>
+                                    ))
+                                }
+                            </View>
+                        </ScrollView>
+
+                    </Modal>
+                )
+            }
         </Modal>
     );
 };
@@ -435,6 +584,7 @@ const StoriesModal = ({
                                 borderRadius: 16,
                                 marginRight: 10,
                             }}
+                            cachePolicy='memory-disk'
                         />
                         <Text style={{
                             color: COLORS.white,
@@ -462,7 +612,7 @@ const StoriesModal = ({
                             width: '100%',
                             height: '100%',
                         }}
-                        resizeMode="cover"
+                        cachePolicy='memory-disk'
                     />
                 </TouchableOpacity>
 
@@ -539,7 +689,7 @@ export default function Story({ story }: { story: UserWithStories }) {
                         currentUserStoriesData && currentUserStoriesData.stories.length > 0 ? styles.storyRing : styles.noStory,
                         currentUserStoriesData && currentUserStoriesData.hasViewedAll && styles.viewedStoryRing
                     ]}>
-                        <RNImage source={{ uri: currentUser?.image }} style={styles.storyAvatar} />
+                        <Image source={{ uri: currentUser?.image }} style={styles.storyAvatar} cachePolicy='memory-disk' />
                     </View>
                     <Text style={styles.storyUsername}>{currentUser?.username.slice(0, 10)}</Text>
                     {currentUserStoriesData && currentUserStoriesData.stories.length > 0 && (
@@ -565,7 +715,7 @@ export default function Story({ story }: { story: UserWithStories }) {
                         !story.stories.length && styles.noStory,
                         story.hasViewedAll && styles.viewedStoryRing
                     ]}>
-                        <RNImage source={{ uri: story.user.image }} style={styles.storyAvatar} />
+                        <Image source={{ uri: story.user.image }} style={styles.storyAvatar} cachePolicy='memory-disk' />
                     </View>
                     <Text style={styles.storyUsername}>{story.user.username.slice(0, 10)}</Text>
                 </TouchableOpacity>
@@ -701,7 +851,7 @@ const AddStoryModel = ({ isAddStoryModelVisible, onClose, currentUser }: AddStor
                         <Image
                             source={{ uri: selectedImage }}
                             style={{ width: "100%", height: "100%", borderRadius: 10 }}
-                            resizeMode="cover"
+                            cachePolicy='memory-disk'
                         />
 
                         <TouchableOpacity style={{

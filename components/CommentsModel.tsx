@@ -40,7 +40,7 @@ export default function CommentsModal({ onClose, postId, visible }: ICommentsMod
 
             setNewComment("");
         } catch (error) {
-            console.log("Error adding comment:", error);
+            console.error("Error adding comment:", error);
         }
     };
 

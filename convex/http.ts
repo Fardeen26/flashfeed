@@ -1,7 +1,7 @@
 import { httpRouter } from "convex/server";
-import { httpAction } from "./_generated/server";
 import { Webhook } from "svix";
 import { api } from "./_generated/api";
+import { httpAction } from "./_generated/server";
 
 const http = httpRouter();
 
@@ -60,7 +60,7 @@ http.route({
                     username: email.split("@")[0],
                 });
             } catch (error) {
-                console.log("Error creating user:", error);
+                console.error("Error creating user:", error);
                 return new Response("Error creating user", { status: 500 });
             }
         }

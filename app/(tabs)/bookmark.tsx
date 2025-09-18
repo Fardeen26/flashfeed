@@ -8,8 +8,6 @@ import { ScrollView, Text, View } from "react-native";
 
 export default function Bookmarks() {
     const bookmarkedPosts = useQuery(api.bookmarks.getBookmarkedPosts);
-    const stories = useQuery(api.stories.fetchStories, {});
-    console.log("stories are here in post", stories)
 
     if (bookmarkedPosts === undefined) return <Loader />;
     if (bookmarkedPosts.length === 0) return <NoBookmarksFound />;
