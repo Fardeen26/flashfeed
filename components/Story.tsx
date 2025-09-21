@@ -21,7 +21,7 @@ const CurrentUserStoriesModal = ({
     visible,
     onClose,
     onAddStory,
-    markStoryAsViewed
+    markStoryAsViewed,
 }: {
     currentUserStories: any[];
     currentUser: any;
@@ -222,6 +222,7 @@ const CurrentUserStoriesModal = ({
                             {currentUser?.username}
                         </Text>
                     </View>
+
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <TouchableOpacity onPress={onAddStory} style={{ marginRight: 15 }}>
                             <Ionicons name="add" size={24} color={COLORS.white} />
@@ -414,7 +415,6 @@ const CurrentUserStoriesModal = ({
                                 }
                             </View>
                         </ScrollView>
-
                     </Modal>
                 )
             }
