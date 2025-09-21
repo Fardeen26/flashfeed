@@ -292,7 +292,7 @@ const CurrentUserStoriesModal = ({
                 }}
             >
                 {
-                    storyViews?.length && storyViews.length > 1 && (
+                    storyViews && storyViews.length > 1 && (
                         <TouchableOpacity style={{ display: 'flex', gap: 0, justifyContent: 'center', alignItems: 'center' }} onPress={() => setIsShowViewsOpen(true)}>
                             <View style={{ display: 'flex', flexDirection: 'row', gap: 0 }}>
                                 {
@@ -366,7 +366,7 @@ const CurrentUserStoriesModal = ({
                                 <Text style={{
                                     color: 'white',
                                     fontSize: 18
-                                }}>{(storyViews?.length && storyViews?.length - 1)}</Text>
+                                }}>{storyViews ? storyViews.length - 1 : 0}</Text>
                             </View>
                             <TouchableOpacity onPress={handleStoryDelete}>
                                 <Ionicons name="trash-outline" size={22} color={COLORS.primary} />
@@ -788,7 +788,7 @@ const AddStoryModel = ({ isAddStoryModelVisible, onClose, currentUser }: AddStor
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: "images",
             allowsEditing: true,
-            aspect: [1, 1],
+            aspect: [9, 16],
             quality: 0.8,
         });
 
